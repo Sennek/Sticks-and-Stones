@@ -6,6 +6,9 @@ public class InventoryGUI : MonoBehaviour {
     Rect characterWindowRect;
     public bool characterWindowShow = true;
     //inventory item slots variables
+
+
+
     public float inventoryItemsXPos;
     public float inventoryItemsYPos;
     float inventoryItemsRowWidth;
@@ -136,7 +139,10 @@ public class InventoryGUI : MonoBehaviour {
             GUILayout.BeginHorizontal();
             for (int t = 0; t < InventoryItemsBoxInRow; t++)
             {
-                GUILayout.Button("Itemslot", GUILayout.Height(inventoryItemsBoxHeight), GUILayout.Width(inventoryItemsBoxWidth));
+                if (GUILayout.Button("Empty slot", GUILayout.Height(inventoryItemsBoxHeight), GUILayout.Width(inventoryItemsBoxWidth)))
+                {
+
+                }
             }
             GUILayout.EndHorizontal();
         }
