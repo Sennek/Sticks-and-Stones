@@ -4,11 +4,12 @@ using UnityEngine;
 
 public class InventoryGUI : MonoBehaviour {
     Rect characterWindowRect;
+    Rect tipRect;
+    Rect destroyAmountRect;
     public bool characterWindowShow = true;
+    public bool showTip = false;
+    public bool showDestroyAmount;
     //inventory item slots variables
-
-
-
     public float inventoryItemsXPos;
     public float inventoryItemsYPos;
     float inventoryItemsRowWidth;
@@ -18,8 +19,20 @@ public class InventoryGUI : MonoBehaviour {
     public int InventoryItemsRowCount = 7;
     public int InventoryItemsBoxInRow = 5;
 
-    public float screenHeight;
-    public float screenWidth;
+    
+    private int tipId;
+
+    public Vector2 testVector1 = new Vector2(100, 100);
+    public Vector2 testVector2 = new Vector2(100, 100);
+    public int spawnId;
+
+
+    public List<ItemsMk2> inventory = new List<ItemsMk2>();
+    public List<ItemsMk2> emptySlots = new List<ItemsMk2>();
+    public List<int> inventoryStacks = new List<int>();
+
+    private ItemDatabaseMk2 database;
+
     //inventory item type tabs variables
 
     //equipped items variables
@@ -38,16 +51,16 @@ public class InventoryGUI : MonoBehaviour {
 
     public Vector2 pos = new Vector2(114, 708);
 
-    private Dictionary<int, string> inventoryNameDictionary;
-
-
-
     private void Start()
     {
+        database = GameObject.Find("ItemDB").GetComponent<ItemDatabaseMk2>();
 
-       
-        screenHeight = Screen.height;
-        screenWidth = Screen.width;
+        for (int i = 0; i < (InventoryItemsRowCount * InventoryItemsBoxInRow); i++)
+        {
+            inventory.Add(new ItemsMk2());
+            emptySlots.Add(new ItemsMk2());
+            inventoryStacks.Add(1);
+        }
 
         //inventory item slots variables
         characterWindowRect = new Rect(0, 0, Screen.width, Screen.height);
@@ -56,30 +69,134 @@ public class InventoryGUI : MonoBehaviour {
         inventoryItemsYPos = inventoryItemsBoxWidth + inventoryItemsBoxWidth / 3;
         inventoryItemsBoxHeight = inventoryItemsBoxWidth;
 
+        tipRect = new Rect((Screen.width/2) - 250 , (Screen.height/2) - 250, 405, 405);
+        destroyAmountRect = tipRect;
+
+        AddItem(0);
+
         //inventory item type tabs variables
+    }
+
+    void AddItem(int id)
+    {
+        for (int i = 0; i < inventory.Count; i++)
+        {
+            //create new if no stack to add
+            if (inventory[i].itemName == null)
+            {
+                for (int j = 0; j < database.items.Count; j++)
+                {
+                    if (database.items[j].itemID == id)
+                    {
+                        inventory[i] = database.items[j];
+                    }
+                }
+                break;
+            }
+            // add to stack if available
+            if ((inventory[i].itemName == database.items[id].itemName) && (inventoryStacks[i] < inventory[i].itemMaxStack))
+            {
+                inventoryStacks[i]++;
+                break;
+            }
+        }
     }
 
 
     private void OnGUI()
     {
+        GUI.skin.box.wordWrap = true;
         if (characterWindowShow)
         {
-            characterWindowRect = GUI.Window(0, characterWindowRect, characterWindowMethod, "Character screen");
+            characterWindowRect = GUI.Window(0, characterWindowRect, characterWindowMethod, "Inventory");
         }
+
+        if (showTip)
+        {
+            tipRect = GUI.Window(1, tipRect, ShowTip, "");
+        }
+
+        if (showDestroyAmount)
+        {
+            destroyAmountRect = GUI.Window(1, destroyAmountRect, ShowDestroyAmount, "");
+        }
+
+    }
+
+    //DESTROY AMOUNT
+
+    void ShowDestroyAmount(int windowId)
+    {
+        GUILayout.BeginArea(new Rect(0, 0, 400, 348));
+        GUILayout.BeginVertical();
+        if(GUILayout.Button("Destroy", GUILayout.Width(200),GUILayout.Height(50)))
+            {
+
+            }
+
+        if (GUILayout.Button("Destroy All", GUILayout.Width(200), GUILayout.Height(50)))
+        {
+            inventory[tipId] = emptySlots[tipId];
+        }
+        GUILayout.EndVertical();
+        GUILayout.EndArea();
+    }
+
+    //ITEM TIP
+    void ShowTip(int windowId)
+    {
+        GUILayout.BeginArea(new Rect(0, 0, 30, 30));
+        if (GUILayout.Button("X", GUILayout.Width(30),GUILayout.Height(30)))
+            {
+            showTip = false;
+            }
+        GUILayout.EndArea();
+
+        GUILayout.BeginArea(new Rect(0, 0, 407, 407));
+        GUILayout.BeginVertical();
+
+        GUILayout.BeginHorizontal();
+        GUILayout.Box(inventory[tipId].itemIcon, GUILayout.Width(200), GUILayout.Height(200));
+        GUILayout.Box(inventory[tipId].itemName + " stats go here", GUILayout.Width(200), GUILayout.Height(200));
+        GUILayout.EndHorizontal();
+        GUILayout.Box(inventory[tipId].itemDesc, GUILayout.Width(407), GUILayout.Height(150));
+
+
+        GUILayout.BeginHorizontal();
+            if (GUILayout.Button("Destroy", GUILayout.Width(200), GUILayout.Height(50)))
+                {
+                    //ask how much to destroy if stacked
+                    if(inventoryStacks[tipId] > 1)
+                        {
+                            showDestroyAmount = true;
+                        }
+                    //destroy immidiately if not stackable or stack == 0
+                    if (inventoryStacks[tipId] < 1)
+                   { 
+                        showTip = false;
+                        inventory[tipId] = emptySlots[tipId];
+                   }
+    }
+        GUILayout.Button("Use", GUILayout.Width(200), GUILayout.Height(50));
+        GUILayout.EndHorizontal();
+
+
+        GUILayout.EndVertical();
+        GUILayout.EndArea();
     }
 
     void characterWindowMethod(int windowId)
     {
-        // character equipped slots
-        inventoryNameDictionary = new Dictionary<int, string>()
-    {
-        {0, string.Empty},
-        {1, string.Empty},
-        {2, string.Empty},
-        {3, string.Empty}
-    };
 
-        inventoryNameDictionary[0] = ItemClass.rockItem.name;
+        GUILayout.BeginArea(new Rect(300, 100, 200, 200));
+        GUILayout.BeginVertical();
+        int.TryParse(GUILayout.TextField(spawnId.ToString()), out spawnId);
+        if (GUILayout.Button("Add Item", GUILayout.Width(90), GUILayout.Height(25)))
+        {
+            AddItem(spawnId);
+        }
+        GUILayout.EndVertical();
+        GUILayout.EndArea();
 
         //horizontal top
         GUILayout.BeginArea(new Rect(horizontalTop, new Vector2(inventoryItemsBoxWidth * 2.25f, inventoryItemsBoxHeight)));
@@ -110,7 +227,7 @@ public class InventoryGUI : MonoBehaviour {
         //vertical right
         GUILayout.BeginArea(new Rect(VerticalRight, new Vector2(inventoryItemsBoxWidth, inventoryItemsBoxHeight * 2.25f)));
         GUILayout.BeginVertical();
-        GUILayout.Button(inventoryNameDictionary[0], GUILayout.Height(inventoryItemsBoxHeight), GUILayout.Width(inventoryItemsBoxWidth));
+        GUILayout.Button("L.Hand", GUILayout.Height(inventoryItemsBoxHeight), GUILayout.Width(inventoryItemsBoxWidth));
         GUILayout.Button("R.Hand", GUILayout.Height(inventoryItemsBoxHeight), GUILayout.Width(inventoryItemsBoxWidth));
         GUILayout.EndVertical();
         GUILayout.EndArea();
@@ -131,20 +248,59 @@ public class InventoryGUI : MonoBehaviour {
 
         GUILayout.EndArea();
 
+
+     
+
         // Inventory item slots
         GUILayout.BeginArea(new Rect(inventoryItemsXPos, inventoryItemsYPos, inventoryItemsBoxWidth * InventoryItemsBoxInRow * 1.25f, inventoryItemsBoxHeight * InventoryItemsRowCount * 1.25f));
 
+        int j = 0;
+        for (int i = 0; i < InventoryItemsRowCount; i++)
+        { 
+            GUILayout.BeginHorizontal();
+            for (int t = 0; t < InventoryItemsBoxInRow; t++)
+            {
+                if (j < inventory.Count)
+                {
+                    if (GUILayout.Button(inventory[j].itemIcon, GUILayout.Height(inventoryItemsBoxHeight), GUILayout.Width(inventoryItemsBoxWidth)))
+                    {
+                        showTip = true;
+                        tipId = j;
+                    }
+                    j++;
+                }
+            }
+            GUILayout.EndHorizontal();
+        }
+        GUILayout.EndArea();
+
+        //display items in stack
+        GUILayout.BeginArea(new Rect(inventoryItemsXPos + 62, inventoryItemsYPos + 65, 500, 700));
+        int k = 0;
         for (int i = 0; i < InventoryItemsRowCount; i++)
         {
             GUILayout.BeginHorizontal();
             for (int t = 0; t < InventoryItemsBoxInRow; t++)
             {
-                if (GUILayout.Button("Empty slot", GUILayout.Height(inventoryItemsBoxHeight), GUILayout.Width(inventoryItemsBoxWidth)))
+                if (k < inventory.Count)
                 {
-
+                    //if stackable
+                    if(inventory[k].itemMaxStack <= 1)
+                    {
+                        GUILayout.Space((inventoryItemsBoxWidth - 20)*2);
+                        k++;
+                    }
+                    //if not stackable or null
+                    else
+                    {
+                        GUILayout.Box("" + inventoryStacks[k], GUILayout.Height(20), GUILayout.Width(20));
+                        GUILayout.Space(inventoryItemsBoxWidth - 20);
+                        k++;
+                    }
                 }
             }
             GUILayout.EndHorizontal();
+            GUILayout.Space(inventoryItemsBoxWidth - 20);
         }
         GUILayout.EndArea();
 

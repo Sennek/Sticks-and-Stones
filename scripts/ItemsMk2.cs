@@ -12,6 +12,8 @@ public class ItemsMk2 {
     public int itemPower;
     public int itemSpeed;
     public ItemType itemType;
+    public int itemMaxStack;
+    public int itemCurrentStack;
 
     public enum ItemType
     {
@@ -20,15 +22,16 @@ public class ItemsMk2 {
         Quest
     }
 
-    public ItemsMk2(string name, int id, string desc, int power, int speed, ItemType type)
+    public ItemsMk2(string name, int id, string desc, int power, int speed, ItemType type, int mst)
     {
         itemName = name;
         itemID = id;
         itemDesc = desc;
-        itemIcon = Resources.Load<Texture2D>("ItemIcons/" + name);
+        itemIcon = Resources.Load<Texture2D>("ItemIcons/" + id);
         itemPower = power;
         itemSpeed = speed;
         itemType = type;
+        itemMaxStack = mst;
     }
     public ItemsMk2()
     {
