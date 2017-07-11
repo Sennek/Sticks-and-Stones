@@ -13,14 +13,9 @@ public class InventoryMk2 : MonoBehaviour {
 
     private ItemDatabaseMk2 database;
 
-    private void Awake()
-    {
-
-    }
-
     private void Start()
     {
-        database = GameObject.Find("Item Database").GetComponent<ItemDatabaseMk2>();
+        database = GameObject.Find("ItemDB").GetComponent<ItemDatabaseMk2>();
         for (int i = 0; i < (slotsX * slotsY); i++)
         {
             slots.Add(new ItemsMk2());
@@ -82,13 +77,14 @@ public class InventoryMk2 : MonoBehaviour {
 
                 if (i<inventory.Count) // make sure i don't exceed inventory[] array count
                 { 
-                slots[i] = inventory[i];
-                if (slots[i].itemName != null)
-                {
-                    GUI.DrawTexture(slotRect, slots[i].itemIcon);
-                }
+                    slots[i] = inventory[i];
 
-                i++;
+                    if (slots[i].itemName != null)
+                    {
+                        GUI.DrawTexture(slotRect, slots[i].itemIcon);
+                    }
+
+                    i++;
                 }
             }
         }

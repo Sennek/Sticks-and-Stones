@@ -10,7 +10,7 @@ public class ItemsMk2 {
     public string itemDesc;
     public Texture2D itemIcon;
     public int itemPower;
-    public int itemSpeed;
+    public int itemWeight;
     public ItemType itemType;
     public int itemMaxStack;
     public int itemCurrentStack;
@@ -19,17 +19,18 @@ public class ItemsMk2 {
     {
         Weapon,
         Consumable,
-        Quest
+        Quest,
+        Misc
     }
 
-    public ItemsMk2(string name, int id, string desc, int power, int speed, ItemType type, int mst)
+    public ItemsMk2(string name, int id, string desc, int power, int wgt, ItemType type, int mst)
     {
         itemName = name;
         itemID = id;
         itemDesc = desc;
         itemIcon = Resources.Load<Texture2D>("ItemIcons/" + id);
         itemPower = power;
-        itemSpeed = speed;
+        itemWeight = wgt;
         itemType = type;
         itemMaxStack = mst;
     }
