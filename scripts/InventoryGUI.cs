@@ -8,11 +8,12 @@ public class InventoryGUI : MonoBehaviour
     Rect tipRect;
     Rect destroyAmountRect;
     Rect showOverloadWarningRect;
-    public bool characterWindowShow = true;
+    public bool characterWindowShow = false;
     public bool showTip = false;
     public bool showDestroyAmount = false;
     public bool weightOverload = false;
     public bool showTipEquipped = false;
+    public bool showTradingWindow = false;
     //inventory item slots variables
     public float inventoryItemsXPos;
     public float inventoryItemsYPos;
@@ -23,6 +24,7 @@ public class InventoryGUI : MonoBehaviour
     public int InventoryItemsRowCount = 7;
     public int InventoryItemsBoxInRow = 5;
 
+    public int gp = 0;
 
 
     public Vector2 scsize = new Vector2(Screen.width, Screen.height);
@@ -43,14 +45,21 @@ public class InventoryGUI : MonoBehaviour
     public List<ItemsMk2> inventory = new List<ItemsMk2>();
     public List<ItemsMk2> emptySlots = new List<ItemsMk2>();
     public List<int> inventoryStacks = new List<int>();
+    public List<int> inventoryStacksDisplayed = new List<int>();
     public List<ItemsMk2> equippedItems = new List<ItemsMk2>();
-    public List<ItemsMk2> inventoryActual = new List<ItemsMk2>();
+    public List<ItemsMk2> inventoryDisplayed = new List<ItemsMk2>();
+    public List<int> displayedSlotsToActual = new List<int>();
 
     //CALLS TO OTHER SCRIPTS
     private ItemDatabaseMk2 database;
     private playerscript playerscript;
 
     //inventory item type tabs variables
+    public bool showAll = true;
+    public bool showEquipment = false;
+    public bool showConsumables = false;
+    public bool showResources = false;
+    public bool showMisc = false;
 
     //equipped items variables
     public Vector2 horizontalTop = new Vector2(169, 32.5f);
@@ -71,15 +80,17 @@ public class InventoryGUI : MonoBehaviour
 
         for (int i = 0; i < (InventoryItemsRowCount * InventoryItemsBoxInRow); i++)
         {
-            inventory.Add(new ItemsMk2());
-            inventoryActual.Add(new ItemsMk2());
-            emptySlots.Add(new ItemsMk2());
+            inventory.Add(new ItemsMk2(0));
+            inventoryDisplayed.Add(new ItemsMk2(0));
+            emptySlots.Add(new ItemsMk2(0));
             inventoryStacks.Add(1);
+            inventoryStacksDisplayed.Add(1);
+            displayedSlotsToActual.Add(i);
         }
 
         for (int i = 0; i < 10; i++)
         {
-            equippedItems.Add(new ItemsMk2());
+            equippedItems.Add(new ItemsMk2(0));
         }
 
         //inventory item slots variables
@@ -109,7 +120,7 @@ public class InventoryGUI : MonoBehaviour
                 { break; }
                 if (amount > database.items[id].itemMaxStack)
                 {
-                    AddPlayerWeight(database.items[id].itemWeight * (database.items[id].itemMaxStack - inventoryStacks[i]));
+                    playerscript.currentWeight = playerscript.currentWeight + (database.items[id].itemWeight * (database.items[id].itemMaxStack - inventoryStacks[i]));
                     if (weightOverload)
                     { break; }
                     amount = amount - (database.items[id].itemMaxStack - inventoryStacks[i]);
@@ -120,7 +131,7 @@ public class InventoryGUI : MonoBehaviour
                 {
                     if ((database.items[id].itemMaxStack - inventoryStacks[i]) >= amount)
                     {
-                        AddPlayerWeight(database.items[id].itemWeight * amount);
+                        playerscript.currentWeight = playerscript.currentWeight + (database.items[id].itemWeight * amount);
                         if (weightOverload)
                         { break; }
                         inventoryStacks[i] = inventoryStacks[i] + amount;
@@ -128,7 +139,7 @@ public class InventoryGUI : MonoBehaviour
                     }
                     if ((database.items[id].itemMaxStack - inventoryStacks[i]) < amount)
                     {
-                        AddPlayerWeight(database.items[id].itemMaxStack - inventoryStacks[i]);
+                        playerscript.currentWeight = playerscript.currentWeight + (database.items[id].itemMaxStack - inventoryStacks[i]);
                         if (weightOverload)
                         { break; }
                         amount = amount - (database.items[id].itemMaxStack - inventoryStacks[i]);
@@ -149,9 +160,9 @@ public class InventoryGUI : MonoBehaviour
                         // add full X full stacks
                         for (int x = 0; x < amount / database.items[id].itemMaxStack; x++)
                         {
-                            if ((inventory[r].itemName == null) && (amount != 0))
+                            if ((inventory[r].itemID == 0) && (amount != 0))
                             {
-                                AddPlayerWeight(database.items[id].itemWeight * database.items[id].itemMaxStack);
+                                playerscript.currentWeight = playerscript.currentWeight + (database.items[id].itemWeight * database.items[id].itemMaxStack);
                                 if (weightOverload)
                                 { break; }
                                 inventory[r] = database.items[id];
@@ -165,9 +176,9 @@ public class InventoryGUI : MonoBehaviour
                         if ((amount < database.items[id].itemMaxStack) && (amount > 0))
                         {
                             // add an underfilled stack
-                            if (inventory[r].itemName == null)
+                            if (inventory[r].itemID == 0)
                             {
-                                AddPlayerWeight(database.items[id].itemWeight * amount);
+                                playerscript.currentWeight = playerscript.currentWeight + (database.items[id].itemWeight * amount);
                                 inventory[r] = database.items[id];
                                 if (weightOverload)
                                 { break; }
@@ -179,9 +190,10 @@ public class InventoryGUI : MonoBehaviour
                     //if need to add an underfilled stack only
                     else
                     {
-                        if (inventory[r].itemName == null)
+                        Debug.Log(database.items[r].itemID);
+                        if (inventory[r].itemID == 0)
                         {
-                            AddPlayerWeight(database.items[id].itemWeight * amount);
+                            playerscript.currentWeight = playerscript.currentWeight + (database.items[id].itemWeight * amount);
                             if (weightOverload)
                             { break; }
                             inventory[r] = database.items[id];
@@ -194,24 +206,37 @@ public class InventoryGUI : MonoBehaviour
         }
     }
 
-
-    void AddPlayerWeight(float inputWeight)
+    void RemoveItem(int slotId, int amount)
     {
-        if (inputWeight > (playerscript.maxWeight - playerscript.currentWeight))
+        //destroy full stack
+        if (inventoryStacks[slotId] == amount)
         {
-            weightOverload = true;
+            playerscript.currentWeight = playerscript.currentWeight - inventory[slotId].itemWeight;
+            inventory[slotId] = emptySlots[1];
+            inventoryStacks[slotId] = 1;
         }
-
-        if (inputWeight <= (playerscript.maxWeight - playerscript.currentWeight) && inputWeight > 0)
+        else
         {
-            playerscript.currentWeight = playerscript.currentWeight + inputWeight;
+            playerscript.currentWeight = playerscript.currentWeight - inventory[slotId].itemWeight * amount;
+            inventoryStacks[slotId] = inventoryStacks[slotId] - amount;
         }
-    }
-
-    void RemovePlayerWeight(float inputWeight)
-    {
-        Debug.Log("weight=" + inputWeight);
-        playerscript.currentWeight = playerscript.currentWeight - inputWeight;
+        for (int i = 0; i < inventory.Count; i++)
+        {
+            if (inventory[i].itemID == 0)
+            {
+                for (int j = i; j < inventory.Count; j++)
+                {
+                    if (inventory[j].itemID != 0)
+                    {
+                        inventory[i] = inventory[j];
+                        inventoryStacks[i] = inventoryStacks[j];
+                        inventory[j] = emptySlots[1];
+                        inventoryStacks[j] = 1;
+                        break;
+                    }
+                }
+            }
+        }
     }
 
     void ShowOverloadWarning(int windowId)
@@ -241,7 +266,7 @@ public class InventoryGUI : MonoBehaviour
     {
         if (database.items[itemId].itemIsHead)
         {
-            if (equippedItems[0].itemName == null)
+            if (equippedItems[0].itemID == 0)
             {
                 equippedItems[0] = database.items[itemId];
                 inventory[tipIdSlot] = emptySlots[tipIdSlot];
@@ -256,7 +281,7 @@ public class InventoryGUI : MonoBehaviour
         }
         if (database.items[itemId].itemIsNeck)
         {
-            if (equippedItems[1].itemName == null)
+            if (equippedItems[1].itemID == 0)
             {
                 equippedItems[1] = database.items[itemId];
                 inventory[tipIdSlot] = emptySlots[tipIdSlot];
@@ -271,7 +296,7 @@ public class InventoryGUI : MonoBehaviour
         }
         if (database.items[itemId].itemIsHands)
         {
-            if (equippedItems[5].itemName == null)
+            if (equippedItems[5].itemID == 0)
             {
                 equippedItems[5] = database.items[itemId];
                 inventory[tipIdSlot] = emptySlots[tipIdSlot];
@@ -286,7 +311,7 @@ public class InventoryGUI : MonoBehaviour
         }
         if (database.items[itemId].itemIsTorso)
         {
-            if (equippedItems[4].itemName == null)
+            if (equippedItems[4].itemID == 0)
             {
                 equippedItems[4] = database.items[itemId];
                 inventory[tipIdSlot] = emptySlots[tipIdSlot];
@@ -301,13 +326,13 @@ public class InventoryGUI : MonoBehaviour
         }
         if (database.items[itemId].itemIsFinger)
         {
-            if (equippedItems[6].itemName == null)
+            if (equippedItems[6].itemID == 0)
             {
                 equippedItems[6] = database.items[itemId];
                 inventory[tipIdSlot] = emptySlots[tipIdSlot];
                 showTip = false;
             }
-            else if (equippedItems[7].itemName == null)
+            else if (equippedItems[7].itemID == 0)
             {
                 equippedItems[7] = database.items[itemId];
                 inventory[tipIdSlot] = emptySlots[tipIdSlot];
@@ -317,7 +342,7 @@ public class InventoryGUI : MonoBehaviour
         }
         if (database.items[itemId].itemIsMainHand)
         {
-            if (equippedItems[8].itemName == null)
+            if (equippedItems[8].itemID == 0)
             {
                 equippedItems[8] = database.items[itemId];
                 inventory[tipIdSlot] = emptySlots[tipIdSlot];
@@ -332,7 +357,7 @@ public class InventoryGUI : MonoBehaviour
         }
         if (database.items[itemId].itemIsOffHand)
         {
-            if (equippedItems[9].itemName == null)
+            if (equippedItems[9].itemID == 0)
             {
                 equippedItems[9] = database.items[itemId];
                 inventory[tipIdSlot] = emptySlots[tipIdSlot];
@@ -347,7 +372,7 @@ public class InventoryGUI : MonoBehaviour
         }
         if (database.items[itemId].itemIsLegs)
         {
-            if (equippedItems[2].itemName == null)
+            if (equippedItems[2].itemID == 0)
             {
                 equippedItems[2] = database.items[itemId];
                 inventory[tipIdSlot] = emptySlots[tipIdSlot];
@@ -362,7 +387,7 @@ public class InventoryGUI : MonoBehaviour
         }
         if (database.items[itemId].itemIsFeet)
         {
-            if (equippedItems[3].itemName == null)
+            if (equippedItems[3].itemID == 0)
             {
                 equippedItems[3] = database.items[itemId];
                 inventory[tipIdSlot] = emptySlots[tipIdSlot];
@@ -380,7 +405,7 @@ public class InventoryGUI : MonoBehaviour
     {
         for (int i = 0; i < inventory.Count; i++)
         {
-            if (inventory[i].itemName == null)
+            if (inventory[i].itemID == 0)
             {
                 equippedItems[tipIdSlot] = emptySlots[tipIdSlot];
                 inventory[i] = database.items[tipIdItem];
@@ -390,37 +415,72 @@ public class InventoryGUI : MonoBehaviour
 
         showTipEquipped = false;
     }
-
+    void SellItem(int amount)
+    {
+        gp = gp + inventory[tipIdSlot].itemCost;
+        RemoveItem(tipIdSlot, amount);
+        inventory[tipIdSlot] = emptySlots[1];
+    }
     private void OnGUI()
     {
+        //SPAWN ITEMS FOR TESTING
+        GUILayout.BeginArea(new Rect(300, 100, 200, 200));
+        GUILayout.BeginVertical();
+        int.TryParse(GUILayout.TextField(spawnId.ToString()), out spawnId);
+        int.TryParse(GUILayout.TextField(spawnAmount.ToString()), out spawnAmount);
+        if (GUILayout.Button("Add Item", GUILayout.Width(90), GUILayout.Height(25)))
+        {
+            if (spawnId < database.items.Count)
+            {
+                AddItem(spawnId, spawnAmount);
+            }
+            else { }
+        }
+        GUILayout.EndVertical();
+        GUILayout.EndArea();
+        //SPAWN ITEMS FOR TESTING END
+
+        GUILayout.BeginArea(new Rect(0, 0, 100, 50));
+        GUILayout.BeginHorizontal();
+        GUILayout.Box(Resources.Load<Texture2D>("gp"), GUILayout.Width(50), GUILayout.Height(50));
+        GUILayout.Box("" + gp, GUILayout.Width(50), GUILayout.Height(50));
+        GUILayout.EndHorizontal();
+        GUILayout.EndArea();
+
         GUI.skin.box.wordWrap = true;
         if (characterWindowShow)
         {
             characterWindowRect = GUI.Window(0, characterWindowRect, characterWindowMethod, "Inventory");
         }
 
+        if (showTradingWindow)
+        {
+            characterWindowRect = GUI.Window(2, characterWindowRect, TradingWindow, "Trading");
+        }
+
         if (showTip)
         {
-            tipRect = GUI.Window(1, tipRect, ShowTip, "");
+            tipRect = GUI.Window(2, tipRect, ShowTip, "");
         }
 
         if (showTipEquipped)
         {
-            tipRect = GUI.Window(1, tipRect, ShowTipEquipped, "");
+            tipRect = GUI.Window(3, tipRect, ShowTipEquipped, "");
         }
 
         if (showDestroyAmount)
         {
-            destroyAmountRect = GUI.Window(1, destroyAmountRect, ShowDestroyAmount, "");
+            destroyAmountRect = GUI.Window(4, destroyAmountRect, ShowDestroyAmount, "");
         }
 
         if (weightOverload)
         {
-            showOverloadWarningRect = GUI.Window(2, showOverloadWarningRect, ShowOverloadWarning, "");
+            showOverloadWarningRect = GUI.Window(5, showOverloadWarningRect, ShowOverloadWarning, "");
         }
 
     }
-
+    void UseItem(int id)
+    { }
     //DESTROY AMOUNT
     void ShowDestroyAmount(int windowId)
     {
@@ -455,29 +515,15 @@ public class InventoryGUI : MonoBehaviour
         GUILayout.BeginHorizontal();
         if (GUILayout.Button("Destroy", GUILayout.Width(200), GUILayout.Height(50)))
         {
-            if (itemCount == inventoryStacks[tipIdSlot]) // if input == full stack, destroy all
-            {
-                RemovePlayerWeight(database.items[tipIdItem].itemWeight * itemCount);
-                itemCount = 1;
-                inventoryStacks[tipIdSlot] = 1;
-                inventory[tipIdSlot] = emptySlots[tipIdSlot];
-                showDestroyAmount = false;
-            }
-            else //if input != full stack, destroy input count
-            {
-                inventoryStacks[tipIdSlot] = inventoryStacks[tipIdSlot] - itemCount;
-                showDestroyAmount = false;
-                RemovePlayerWeight(database.items[tipIdItem].itemWeight * itemCount);
-                itemCount = 1;
-            }
+            RemoveItem(tipIdSlot, itemCount);
+            itemCount = 1;
+            showDestroyAmount = false;
         }
 
         if (GUILayout.Button("Destroy All", GUILayout.Width(200), GUILayout.Height(50)))
         {
-            RemovePlayerWeight(database.items[tipIdItem].itemWeight * inventoryStacks[tipIdSlot]);
+            RemoveItem(tipIdSlot, inventoryStacks[tipIdSlot]);
             itemCount = 1;
-            inventoryStacks[tipIdSlot] = 1;
-            inventory[tipIdSlot] = emptySlots[tipIdSlot];
             showDestroyAmount = false;
         }
         GUILayout.EndHorizontal();
@@ -509,11 +555,6 @@ public class InventoryGUI : MonoBehaviour
         GUILayout.BeginHorizontal();
         if (GUILayout.Button("Destroy", GUILayout.Width(200), GUILayout.Height(50)))
         {
-            if (database.items[tipIdSlot].itemType == ItemsMk2.ItemType.Weapon)
-            {
-                Debug.Log("GOOOOD");
-            }
-
             //ask how much to destroy if stacked
             if (inventoryStacks[tipIdSlot] > 1)
             {
@@ -524,10 +565,7 @@ public class InventoryGUI : MonoBehaviour
             if (inventoryStacks[tipIdSlot] == 1)
             {
                 showTip = false;
-                Debug.Log("weight=" + database.items[tipIdItem].itemWeight);
-                RemovePlayerWeight(database.items[tipIdItem].itemWeight);
-                inventoryStacks[tipIdSlot] = 0;
-                inventory[tipIdSlot] = emptySlots[tipIdSlot];
+                RemoveItem(tipIdSlot, 1);
             }
         }
 
@@ -543,7 +581,7 @@ public class InventoryGUI : MonoBehaviour
         {
             if (GUILayout.Button("Use", GUILayout.Width(200), GUILayout.Height(50)))
             {
-
+                UseItem(tipIdItem);
             }
         }
         GUILayout.EndHorizontal();
@@ -575,8 +613,8 @@ public class InventoryGUI : MonoBehaviour
         if (GUILayout.Button("Destroy", GUILayout.Width(200), GUILayout.Height(50)))
         {
             showTipEquipped = false;
-            RemovePlayerWeight(database.items[tipIdItem].itemWeight);
-            equippedItems[tipIdSlot] = emptySlots[tipIdSlot];
+            playerscript.currentWeight = playerscript.currentWeight - database.items[tipIdItem].itemWeight;
+            equippedItems[tipIdSlot] = emptySlots[1];
         }
         if (GUILayout.Button("Unequip", GUILayout.Width(200), GUILayout.Height(50)))
         {
@@ -592,29 +630,12 @@ public class InventoryGUI : MonoBehaviour
     //DISPLAY INVENTORY
     void characterWindowMethod(int windowId)
     {
-        //SPAWN ITEMS FOR TESTING
-        GUILayout.BeginArea(new Rect(300, 100, 200, 200));
-        GUILayout.BeginVertical();
-        int.TryParse(GUILayout.TextField(spawnId.ToString()), out spawnId);
-        int.TryParse(GUILayout.TextField(spawnAmount.ToString()), out spawnAmount);
-        if (GUILayout.Button("Add Item", GUILayout.Width(90), GUILayout.Height(25)))
-        {
-            if (spawnId < database.items.Count)
-            {
-                AddItem(spawnId, spawnAmount);
-            }
-            else { }
-
-        }
-        GUILayout.EndVertical();
-        GUILayout.EndArea();
-
         //horizontal top
         GUILayout.BeginArea(new Rect(horizontalTop, new Vector2(inventoryItemsBoxWidth * 2.25f, inventoryItemsBoxHeight)));
         GUILayout.BeginHorizontal();
         if (GUILayout.Button(equippedItems[0].itemIcon, GUILayout.Height(inventoryItemsBoxHeight), GUILayout.Width(inventoryItemsBoxWidth)))
         {
-            if (equippedItems[0].itemName != null)
+            if (equippedItems[0].itemID != 0)
             {
                 tipIdItem = equippedItems[0].itemID;
                 tipIdSlot = 0;
@@ -623,7 +644,7 @@ public class InventoryGUI : MonoBehaviour
         }
         if (GUILayout.Button(equippedItems[1].itemIcon, GUILayout.Height(inventoryItemsBoxHeight), GUILayout.Width(inventoryItemsBoxWidth)))
         {
-            if (equippedItems[1].itemName != null)
+            if (equippedItems[1].itemID != 0)
             {
                 tipIdItem = equippedItems[1].itemID;
                 tipIdSlot = 1;
@@ -638,7 +659,7 @@ public class InventoryGUI : MonoBehaviour
         GUILayout.BeginHorizontal();
         if (GUILayout.Button(equippedItems[2].itemIcon, GUILayout.Height(inventoryItemsBoxHeight), GUILayout.Width(inventoryItemsBoxWidth)))
         {
-            if (equippedItems[2].itemName != null)
+            if (equippedItems[2].itemID != 0)
             {
                 tipIdItem = equippedItems[2].itemID;
                 tipIdSlot = 2;
@@ -647,7 +668,7 @@ public class InventoryGUI : MonoBehaviour
         }
         if (GUILayout.Button(equippedItems[3].itemIcon, GUILayout.Height(inventoryItemsBoxHeight), GUILayout.Width(inventoryItemsBoxWidth)))
         {
-            if (equippedItems[3].itemName != null)
+            if (equippedItems[3].itemID != 0)
             {
                 tipIdItem = equippedItems[3].itemID;
                 tipIdSlot = 3;
@@ -662,7 +683,7 @@ public class InventoryGUI : MonoBehaviour
         GUILayout.BeginVertical();
         if (GUILayout.Button(equippedItems[4].itemIcon, GUILayout.Height(inventoryItemsBoxHeight), GUILayout.Width(inventoryItemsBoxWidth)))
         {
-            if (equippedItems[4].itemName != null)
+            if (equippedItems[4].itemID != 0)
             {
                 tipIdItem = equippedItems[4].itemID;
                 tipIdSlot = 4;
@@ -672,7 +693,7 @@ public class InventoryGUI : MonoBehaviour
 
         if (GUILayout.Button(equippedItems[5].itemIcon, GUILayout.Height(inventoryItemsBoxHeight), GUILayout.Width(inventoryItemsBoxWidth)))
         {
-            if (equippedItems[5].itemName != null)
+            if (equippedItems[5].itemID != 0)
             {
                 tipIdItem = equippedItems[5].itemID;
                 tipIdSlot = 5;
@@ -681,7 +702,7 @@ public class InventoryGUI : MonoBehaviour
         }
         if (GUILayout.Button(equippedItems[6].itemIcon, GUILayout.Height(inventoryItemsBoxHeight), GUILayout.Width(inventoryItemsBoxWidth)))
         {
-            if (equippedItems[6].itemName != null)
+            if (equippedItems[6].itemID != 0)
             {
                 tipIdItem = equippedItems[6].itemID;
                 tipIdSlot = 6;
@@ -690,7 +711,7 @@ public class InventoryGUI : MonoBehaviour
         }
         if (GUILayout.Button(equippedItems[7].itemIcon, GUILayout.Height(inventoryItemsBoxHeight), GUILayout.Width(inventoryItemsBoxWidth)))
         {
-            if (equippedItems[7].itemName != null)
+            if (equippedItems[7].itemID != 0)
             {
                 tipIdItem = equippedItems[7].itemID;
                 tipIdSlot = 7;
@@ -705,7 +726,7 @@ public class InventoryGUI : MonoBehaviour
         GUILayout.BeginVertical();
         if (GUILayout.Button(equippedItems[8].itemIcon, GUILayout.Height(inventoryItemsBoxHeight), GUILayout.Width(inventoryItemsBoxWidth)))
         {
-            if (equippedItems[8].itemName != null)
+            if (equippedItems[8].itemID != 0)
             {
                 tipIdItem = equippedItems[8].itemID;
                 tipIdSlot = 8;
@@ -714,7 +735,7 @@ public class InventoryGUI : MonoBehaviour
         }
         if (GUILayout.Button(equippedItems[9].itemIcon, GUILayout.Height(inventoryItemsBoxHeight), GUILayout.Width(inventoryItemsBoxWidth)))
         {
-            if (equippedItems[9].itemName != null)
+            if (equippedItems[9].itemID != 0)
             {
                 tipIdItem = equippedItems[9].itemID;
                 tipIdSlot = 9;
@@ -724,17 +745,52 @@ public class InventoryGUI : MonoBehaviour
         GUILayout.EndVertical();
         GUILayout.EndArea();
 
-        //Inventory item types tab
+        //Inventory item type tabs
 
         GUILayout.BeginArea(new Rect(inventoryItemsXPos, 20, inventoryItemsBoxWidth * InventoryItemsBoxInRow * 1.25f, inventoryItemsBoxHeight));
 
         GUILayout.BeginHorizontal();
 
-        GUILayout.Button("All", GUILayout.Height(inventoryItemsBoxHeight), GUILayout.Width(inventoryItemsBoxWidth * 1.1f));
-        GUILayout.Button("Equpment", GUILayout.Height(inventoryItemsBoxHeight), GUILayout.Width(inventoryItemsBoxWidth * 1.1f));
-        GUILayout.Button("Consumables", GUILayout.Height(inventoryItemsBoxHeight), GUILayout.Width(inventoryItemsBoxWidth * 1.1f));
-        GUILayout.Button("Resources", GUILayout.Height(inventoryItemsBoxHeight), GUILayout.Width(inventoryItemsBoxWidth * 1.1f));
-        GUILayout.Button("Misc", GUILayout.Height(inventoryItemsBoxHeight), GUILayout.Width(inventoryItemsBoxWidth * 1.1f));
+        if (GUILayout.Button("All", GUILayout.Height(inventoryItemsBoxHeight), GUILayout.Width(inventoryItemsBoxWidth * 1.1f)))
+        {
+            showAll = true;
+            showEquipment = false;
+            showConsumables = false;
+            showResources = false;
+            showMisc = false;
+        }
+        if (GUILayout.Button("Equpment", GUILayout.Height(inventoryItemsBoxHeight), GUILayout.Width(inventoryItemsBoxWidth * 1.1f)))
+        {
+            showAll = false;
+            showEquipment = true;
+            showConsumables = false;
+            showResources = false;
+            showMisc = false;
+        }
+        if (GUILayout.Button("Consumables", GUILayout.Height(inventoryItemsBoxHeight), GUILayout.Width(inventoryItemsBoxWidth * 1.1f)))
+        {
+            showAll = false;
+            showEquipment = false;
+            showConsumables = true;
+            showResources = false;
+            showMisc = false;
+        }
+        if (GUILayout.Button("Resources", GUILayout.Height(inventoryItemsBoxHeight), GUILayout.Width(inventoryItemsBoxWidth * 1.1f)))
+        {
+            showAll = false;
+            showEquipment = false;
+            showConsumables = false;
+            showResources = true;
+            showMisc = false;
+        }
+        if (GUILayout.Button("Misc", GUILayout.Height(inventoryItemsBoxHeight), GUILayout.Width(inventoryItemsBoxWidth * 1.1f)))
+        {
+            showAll = false;
+            showEquipment = false;
+            showConsumables = false;
+            showResources = false;
+            showMisc = true;
+        }
 
         GUILayout.EndHorizontal();
 
@@ -750,19 +806,95 @@ public class InventoryGUI : MonoBehaviour
             {
                 if (j < inventory.Count)
                 {
+
+                    inventoryDisplayed[j] = emptySlots[1];
+                    inventoryStacksDisplayed[j] = 1;
+                    if (showAll)
+                    {
+                        int displayedSlot = 0;
+                        for (int k = 0; k < inventory.Count; k++)
+                        {
+                            if (inventory[k].itemID != 0)
+                            {
+                                displayedSlotsToActual[displayedSlot] = k;
+                                inventoryDisplayed[displayedSlot] = inventory[k];
+                                inventoryStacksDisplayed[displayedSlot] = inventoryStacks[k];
+                                displayedSlot++;
+                            }
+                        }
+                    }
+                    if (showMisc)
+                    {
+                        int displayedSlot = 0;
+                        for (int k = 0; k < inventory.Count; k++)
+                        {
+                            if (inventory[k].itemType == ItemsMk2.ItemType.Misc)
+                            {
+                                displayedSlotsToActual[displayedSlot] = k;
+                                inventoryDisplayed[displayedSlot] = inventory[k];
+                                inventoryStacksDisplayed[displayedSlot] = inventoryStacks[k];
+                                displayedSlot++;
+                            }
+                        }
+                    }
+                    if (showResources)
+                    {
+                        int displayedSlot = 0;
+                        for (int k = 0; k < inventory.Count; k++)
+                        {
+                            if ((inventory[k].itemType == ItemsMk2.ItemType.Misc) && (inventory[k].itemIsResource))
+                            {
+                                displayedSlotsToActual[displayedSlot] = k;
+                                inventoryDisplayed[displayedSlot] = inventory[k];
+                                inventoryStacksDisplayed[displayedSlot] = inventoryStacks[k];
+                                displayedSlot++;
+                            }
+                        }
+                    }
+                    if (showConsumables)
+                    {
+                        int displayedSlot = 0;
+                        for (int k = 0; k < inventory.Count; k++)
+                        {
+                            if (inventory[k].itemType == ItemsMk2.ItemType.Consumable)
+                            {
+                                displayedSlotsToActual[displayedSlot] = k;
+                                inventoryDisplayed[displayedSlot] = inventory[k];
+                                inventoryStacksDisplayed[displayedSlot] = inventoryStacks[k];
+                                displayedSlot++;
+                            }
+                        }
+                    }
+                    if (showEquipment)
+                    {
+                        int displayedSlot = 0;
+                        for (int k = 0; k < inventory.Count; k++)
+                        {
+                            if ((inventory[k].itemType == ItemsMk2.ItemType.Armor) || (inventory[k].itemType == ItemsMk2.ItemType.Weapon) || (inventory[k].itemType == ItemsMk2.ItemType.Jewelry))
+                            {
+                                displayedSlotsToActual[displayedSlot] = k;
+                                inventoryDisplayed[displayedSlot] = inventory[k];
+                                inventoryStacksDisplayed[displayedSlot] = inventoryStacks[k];
+                                displayedSlot++;
+                            }
+                        }
+                    }
+
+
+
                     GUILayout.BeginArea(new Rect(inventoryItemsXPos + (inventoryItemsBoxWidth * t * 1.05f), inventoryItemsYPos + (inventoryItemsBoxWidth * i * 1.05f), inventoryItemsBoxWidth * 1.05f, inventoryItemsBoxHeight * 1.05f));
-                    if (GUILayout.Button(inventory[j].itemIcon, GUILayout.Height(inventoryItemsBoxHeight), GUILayout.Width(inventoryItemsBoxWidth)) && inventory[j].itemName != null)
+                    if (GUILayout.Button(inventoryDisplayed[j].itemIcon, GUILayout.Height(inventoryItemsBoxHeight), GUILayout.Width(inventoryItemsBoxWidth)) && inventoryDisplayed[j].itemID != 0)
                     {
                         showTip = true;
-                        tipIdItem = inventory[j].itemID;
-                        tipIdSlot = j;
+                        tipIdItem = inventoryDisplayed[j].itemID;
+                        tipIdSlot = displayedSlotsToActual[j];
                     }
                     //DISPLAY ITEMCOUNT BEGIN
                     GUILayout.BeginArea(new Rect(inventoryItemsBoxWidth - 25, inventoryItemsBoxWidth - 20, 40, 20));
                     //if stackable
-                    if (inventory[j].itemMaxStack > 1)
+                    if (inventoryDisplayed[j].itemMaxStack > 1)
                     {
-                        GUILayout.Box("" + inventoryStacks[j], GUILayout.Height(20), GUILayout.Width(25));
+                        GUILayout.Box("" + inventoryStacksDisplayed[j], GUILayout.Height(20), GUILayout.Width(25));
                         GUILayout.Space(inventoryItemsBoxWidth - 20);
                     }
                     GUILayout.EndArea();
@@ -825,4 +957,162 @@ public class InventoryGUI : MonoBehaviour
 
     }
 
+    void TradingWindow(int windowId)
+    {
+        GUILayout.BeginArea(new Rect(inventoryItemsXPos, 20, inventoryItemsBoxWidth * InventoryItemsBoxInRow * 1.25f, inventoryItemsBoxHeight));
+
+        GUILayout.BeginHorizontal();
+
+        if (GUILayout.Button("All", GUILayout.Height(inventoryItemsBoxHeight), GUILayout.Width(inventoryItemsBoxWidth * 1.1f)))
+        {
+            showAll = true;
+            showEquipment = false;
+            showConsumables = false;
+            showResources = false;
+            showMisc = false;
+        }
+        if (GUILayout.Button("Equpment", GUILayout.Height(inventoryItemsBoxHeight), GUILayout.Width(inventoryItemsBoxWidth * 1.1f)))
+        {
+            showAll = false;
+            showEquipment = true;
+            showConsumables = false;
+            showResources = false;
+            showMisc = false;
+        }
+        if (GUILayout.Button("Consumables", GUILayout.Height(inventoryItemsBoxHeight), GUILayout.Width(inventoryItemsBoxWidth * 1.1f)))
+        {
+            showAll = false;
+            showEquipment = false;
+            showConsumables = true;
+            showResources = false;
+            showMisc = false;
+        }
+        if (GUILayout.Button("Resources", GUILayout.Height(inventoryItemsBoxHeight), GUILayout.Width(inventoryItemsBoxWidth * 1.1f)))
+        {
+            showAll = false;
+            showEquipment = false;
+            showConsumables = false;
+            showResources = true;
+            showMisc = false;
+        }
+        if (GUILayout.Button("Misc", GUILayout.Height(inventoryItemsBoxHeight), GUILayout.Width(inventoryItemsBoxWidth * 1.1f)))
+        {
+            showAll = false;
+            showEquipment = false;
+            showConsumables = false;
+            showResources = false;
+            showMisc = true;
+        }
+
+        GUILayout.EndHorizontal();
+
+        GUILayout.EndArea();
+        int j = 0;
+        for (int i = 0; i < InventoryItemsRowCount; i++)
+        {
+            GUILayout.BeginHorizontal();
+            for (int t = 0; t < InventoryItemsBoxInRow; t++)
+            {
+                if (j < inventory.Count)
+                {
+
+                    inventoryDisplayed[j] = emptySlots[1];
+                    inventoryStacksDisplayed[j] = 1;
+                    if (showAll)
+                    {
+                        int displayedSlot = 0;
+                        for (int k = 0; k < inventory.Count; k++)
+                        {
+                            if (inventory[k].itemID != 0)
+                            {
+                                displayedSlotsToActual[displayedSlot] = k;
+                                inventoryDisplayed[displayedSlot] = inventory[k];
+                                inventoryStacksDisplayed[displayedSlot] = inventoryStacks[k];
+                                displayedSlot++;
+                            }
+                        }
+                    }
+                    if (showMisc)
+                    {
+                        int displayedSlot = 0;
+                        for (int k = 0; k < inventory.Count; k++)
+                        {
+                            if (inventory[k].itemType == ItemsMk2.ItemType.Misc)
+                            {
+                                displayedSlotsToActual[displayedSlot] = k;
+                                inventoryDisplayed[displayedSlot] = inventory[k];
+                                inventoryStacksDisplayed[displayedSlot] = inventoryStacks[k];
+                                displayedSlot++;
+                            }
+                        }
+                    }
+                    if (showResources)
+                    {
+                        int displayedSlot = 0;
+                        for (int k = 0; k < inventory.Count; k++)
+                        {
+                            if ((inventory[k].itemType == ItemsMk2.ItemType.Misc) && (inventory[k].itemIsResource))
+                            {
+                                displayedSlotsToActual[displayedSlot] = k;
+                                inventoryDisplayed[displayedSlot] = inventory[k];
+                                inventoryStacksDisplayed[displayedSlot] = inventoryStacks[k];
+                                displayedSlot++;
+                            }
+                        }
+                    }
+                    if (showConsumables)
+                    {
+                        int displayedSlot = 0;
+                        for (int k = 0; k < inventory.Count; k++)
+                        {
+                            if (inventory[k].itemType == ItemsMk2.ItemType.Consumable)
+                            {
+                                displayedSlotsToActual[displayedSlot] = k;
+                                inventoryDisplayed[displayedSlot] = inventory[k];
+                                inventoryStacksDisplayed[displayedSlot] = inventoryStacks[k];
+                                displayedSlot++;
+                            }
+                        }
+                    }
+                    if (showEquipment)
+                    {
+                        int displayedSlot = 0;
+                        for (int k = 0; k < inventory.Count; k++)
+                        {
+                            if ((inventory[k].itemType == ItemsMk2.ItemType.Armor) || (inventory[k].itemType == ItemsMk2.ItemType.Weapon) || (inventory[k].itemType == ItemsMk2.ItemType.Jewelry))
+                            {
+                                displayedSlotsToActual[displayedSlot] = k;
+                                inventoryDisplayed[displayedSlot] = inventory[k];
+                                inventoryStacksDisplayed[displayedSlot] = inventoryStacks[k];
+                                displayedSlot++;
+                            }
+                        }
+                    }
+
+
+
+                    GUILayout.BeginArea(new Rect(inventoryItemsXPos + (inventoryItemsBoxWidth * t * 1.05f), inventoryItemsYPos + (inventoryItemsBoxWidth * i * 1.05f), inventoryItemsBoxWidth * 1.05f, inventoryItemsBoxHeight * 1.05f));
+                    if (GUILayout.Button(inventoryDisplayed[j].itemIcon, GUILayout.Height(inventoryItemsBoxHeight), GUILayout.Width(inventoryItemsBoxWidth)) && inventoryDisplayed[j].itemID != 0)
+                    {
+                        showTip = true;
+                        tipIdItem = inventoryDisplayed[j].itemID;
+                        tipIdSlot = displayedSlotsToActual[j];
+                    }
+                    //DISPLAY ITEMCOUNT BEGIN
+                    GUILayout.BeginArea(new Rect(inventoryItemsBoxWidth - 25, inventoryItemsBoxWidth - 20, 40, 20));
+                    //if stackable
+                    if (inventoryDisplayed[j].itemMaxStack > 1)
+                    {
+                        GUILayout.Box("" + inventoryStacksDisplayed[j], GUILayout.Height(20), GUILayout.Width(25));
+                        GUILayout.Space(inventoryItemsBoxWidth - 20);
+                    }
+                    GUILayout.EndArea();
+                    //DISPLAY ITEMCOUNT END
+                    GUILayout.EndArea();
+                    j++;
+                }
+            }
+            GUILayout.EndHorizontal();
+        }
+    }
 }

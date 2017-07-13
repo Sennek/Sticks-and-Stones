@@ -62,7 +62,7 @@ public class ItemsMk2
         Armor,
         Jewelry,
         Misc,
-        Consumable
+        Consumable,       
     }
 
     //Weapons
@@ -157,8 +157,8 @@ public class ItemsMk2
         itemRestoreStamina = stamina;
     }
     //empty
-    public ItemsMk2()
+    public ItemsMk2(int id)
     {
-
+        itemID = id;
     }
 }

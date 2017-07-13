@@ -8,9 +8,12 @@ public class Smithy : MonoBehaviour {
     GameObject player;
     bool playerWithinRange = false;
     bool showInteractionWindow = false;
+    private InventoryGUI inventory;
+
     private void Start()
     {
         player = GameObject.Find("Player");
+        inventory = GameObject.Find("ItemDB").GetComponent<InventoryGUI>();
     }
 
     private void OnTriggerEnter2D(Collider2D player)
@@ -21,6 +24,7 @@ public class Smithy : MonoBehaviour {
     private void OnTriggerExit2D(Collider2D player)
     {
         playerWithinRange = false;
+        showInteractionWindow = false;
     }
 
     private void OnGUI()
@@ -40,9 +44,10 @@ public class Smithy : MonoBehaviour {
             upgrade();
         }
 
-        if (GUI.Button(new Rect(130, 150, 75, 30), "No"))
+        if (GUI.Button(new Rect(130, 150, 75, 30), "No, i want to trade"))
         {
             showInteractionWindow = false;
+            inventory.showTradingWindow = true;
         }
     }
 
