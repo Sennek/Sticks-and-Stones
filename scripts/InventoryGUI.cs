@@ -12,6 +12,7 @@ public class InventoryGUI : MonoBehaviour
     public bool showTip = false;
     public bool showDestroyAmount = false;
     public bool weightOverload = false;
+    public bool showTipEquipped = false;
     //inventory item slots variables
     public float inventoryItemsXPos;
     public float inventoryItemsYPos;
@@ -22,8 +23,15 @@ public class InventoryGUI : MonoBehaviour
     public int InventoryItemsRowCount = 7;
     public int InventoryItemsBoxInRow = 5;
 
+
+
+    public Vector2 scsize = new Vector2(Screen.width, Screen.height);
+
     private int itemCount = 1;
-    private int tipId;
+    private float itemCountFloat;
+    public int tipIdItem;
+    public int tipIdSlot;
+    public float tipIdWeight;
 
 
     public Vector2 testVector1 = new Vector2(100, 100);
@@ -31,10 +39,13 @@ public class InventoryGUI : MonoBehaviour
     public int spawnId;
     public int spawnAmount;
 
-
+    //Lists
     public List<ItemsMk2> inventory = new List<ItemsMk2>();
     public List<ItemsMk2> emptySlots = new List<ItemsMk2>();
     public List<int> inventoryStacks = new List<int>();
+    public List<ItemsMk2> equippedItems = new List<ItemsMk2>();
+    public List<ItemsMk2> inventoryActual = new List<ItemsMk2>();
+
     //CALLS TO OTHER SCRIPTS
     private ItemDatabaseMk2 database;
     private playerscript playerscript;
@@ -46,7 +57,6 @@ public class InventoryGUI : MonoBehaviour
     public Vector2 horizontalBottom = new Vector2(169, 581.1f);
     public Vector2 VerticalLeft = new Vector2(21.7f, 163.2f);
     public Vector2 VerticalRight = new Vector2(420.5f, 252.2f);
-    //TESTERSTER
 
     //progress bars variables
     public Texture2D encFull;
@@ -62,8 +72,14 @@ public class InventoryGUI : MonoBehaviour
         for (int i = 0; i < (InventoryItemsRowCount * InventoryItemsBoxInRow); i++)
         {
             inventory.Add(new ItemsMk2());
+            inventoryActual.Add(new ItemsMk2());
             emptySlots.Add(new ItemsMk2());
             inventoryStacks.Add(1);
+        }
+
+        for (int i = 0; i < 10; i++)
+        {
+            equippedItems.Add(new ItemsMk2());
         }
 
         //inventory item slots variables
@@ -93,7 +109,7 @@ public class InventoryGUI : MonoBehaviour
                 { break; }
                 if (amount > database.items[id].itemMaxStack)
                 {
-                    ModifyPlayerWeight(database.items[id].itemWeight * (database.items[id].itemMaxStack - inventoryStacks[i]));
+                    AddPlayerWeight(database.items[id].itemWeight * (database.items[id].itemMaxStack - inventoryStacks[i]));
                     if (weightOverload)
                     { break; }
                     amount = amount - (database.items[id].itemMaxStack - inventoryStacks[i]);
@@ -104,7 +120,7 @@ public class InventoryGUI : MonoBehaviour
                 {
                     if ((database.items[id].itemMaxStack - inventoryStacks[i]) >= amount)
                     {
-                        ModifyPlayerWeight(database.items[id].itemWeight * amount);
+                        AddPlayerWeight(database.items[id].itemWeight * amount);
                         if (weightOverload)
                         { break; }
                         inventoryStacks[i] = inventoryStacks[i] + amount;
@@ -112,7 +128,7 @@ public class InventoryGUI : MonoBehaviour
                     }
                     if ((database.items[id].itemMaxStack - inventoryStacks[i]) < amount)
                     {
-                        ModifyPlayerWeight(database.items[id].itemMaxStack - inventoryStacks[i]);
+                        AddPlayerWeight(database.items[id].itemMaxStack - inventoryStacks[i]);
                         if (weightOverload)
                         { break; }
                         amount = amount - (database.items[id].itemMaxStack - inventoryStacks[i]);
@@ -134,8 +150,8 @@ public class InventoryGUI : MonoBehaviour
                         for (int x = 0; x < amount / database.items[id].itemMaxStack; x++)
                         {
                             if ((inventory[r].itemName == null) && (amount != 0))
-                            {   
-                                ModifyPlayerWeight(database.items[id].itemWeight * database.items[id].itemMaxStack);
+                            {
+                                AddPlayerWeight(database.items[id].itemWeight * database.items[id].itemMaxStack);
                                 if (weightOverload)
                                 { break; }
                                 inventory[r] = database.items[id];
@@ -151,7 +167,7 @@ public class InventoryGUI : MonoBehaviour
                             // add an underfilled stack
                             if (inventory[r].itemName == null)
                             {
-                                ModifyPlayerWeight(database.items[id].itemWeight * amount);
+                                AddPlayerWeight(database.items[id].itemWeight * amount);
                                 inventory[r] = database.items[id];
                                 if (weightOverload)
                                 { break; }
@@ -165,7 +181,7 @@ public class InventoryGUI : MonoBehaviour
                     {
                         if (inventory[r].itemName == null)
                         {
-                            ModifyPlayerWeight(database.items[id].itemWeight * amount);
+                            AddPlayerWeight(database.items[id].itemWeight * amount);
                             if (weightOverload)
                             { break; }
                             inventory[r] = database.items[id];
@@ -179,24 +195,33 @@ public class InventoryGUI : MonoBehaviour
     }
 
 
-    void ModifyPlayerWeight(float inputWeight)
+    void AddPlayerWeight(float inputWeight)
     {
         if (inputWeight > (playerscript.maxWeight - playerscript.currentWeight))
         {
             weightOverload = true;
         }
 
-        if (inputWeight <= (playerscript.maxWeight - playerscript.currentWeight))
+        if (inputWeight <= (playerscript.maxWeight - playerscript.currentWeight) && inputWeight > 0)
         {
             playerscript.currentWeight = playerscript.currentWeight + inputWeight;
         }
     }
+
+    void RemovePlayerWeight(float inputWeight)
+    {
+        Debug.Log("weight=" + inputWeight);
+        playerscript.currentWeight = playerscript.currentWeight - inputWeight;
+    }
+
     void ShowOverloadWarning(int windowId)
     {
+        characterWindowShow = false;
         GUILayout.BeginArea(new Rect(0, 0, 30, 30));
         if (GUILayout.Button("X", GUILayout.Width(30), GUILayout.Height(30)))
         {
             weightOverload = false;
+            characterWindowShow = true;
         }
         GUILayout.EndArea();
 
@@ -206,9 +231,164 @@ public class InventoryGUI : MonoBehaviour
         if (GUILayout.Button("OK", GUILayout.Width(400), GUILayout.Height(50)))
         {
             weightOverload = false;
+            characterWindowShow = true;
         }
         GUILayout.EndVertical();
         GUILayout.EndArea();
+    }
+
+    void EquipItem(int itemId)
+    {
+        if (database.items[itemId].itemIsHead)
+        {
+            if (equippedItems[0].itemName == null)
+            {
+                equippedItems[0] = database.items[itemId];
+                inventory[tipIdSlot] = emptySlots[tipIdSlot];
+                showTip = false;
+            }
+            else
+            {
+                inventory[tipIdSlot] = equippedItems[0];
+                equippedItems[0] = database.items[itemId];
+                showTip = false;
+            }
+        }
+        if (database.items[itemId].itemIsNeck)
+        {
+            if (equippedItems[1].itemName == null)
+            {
+                equippedItems[1] = database.items[itemId];
+                inventory[tipIdSlot] = emptySlots[tipIdSlot];
+                showTip = false;
+            }
+            else
+            {
+                inventory[tipIdSlot] = equippedItems[1];
+                equippedItems[0] = database.items[itemId];
+                showTip = false;
+            }
+        }
+        if (database.items[itemId].itemIsHands)
+        {
+            if (equippedItems[5].itemName == null)
+            {
+                equippedItems[5] = database.items[itemId];
+                inventory[tipIdSlot] = emptySlots[tipIdSlot];
+                showTip = false;
+            }
+            else
+            {
+                inventory[tipIdSlot] = equippedItems[5];
+                equippedItems[5] = database.items[itemId];
+                showTip = false;
+            }
+        }
+        if (database.items[itemId].itemIsTorso)
+        {
+            if (equippedItems[4].itemName == null)
+            {
+                equippedItems[4] = database.items[itemId];
+                inventory[tipIdSlot] = emptySlots[tipIdSlot];
+                showTip = false;
+            }
+            else
+            {
+                inventory[tipIdSlot] = equippedItems[4];
+                equippedItems[4] = database.items[itemId];
+                showTip = false;
+            }
+        }
+        if (database.items[itemId].itemIsFinger)
+        {
+            if (equippedItems[6].itemName == null)
+            {
+                equippedItems[6] = database.items[itemId];
+                inventory[tipIdSlot] = emptySlots[tipIdSlot];
+                showTip = false;
+            }
+            else if (equippedItems[7].itemName == null)
+            {
+                equippedItems[7] = database.items[itemId];
+                inventory[tipIdSlot] = emptySlots[tipIdSlot];
+                showTip = false;
+            }
+
+        }
+        if (database.items[itemId].itemIsMainHand)
+        {
+            if (equippedItems[8].itemName == null)
+            {
+                equippedItems[8] = database.items[itemId];
+                inventory[tipIdSlot] = emptySlots[tipIdSlot];
+                showTip = false;
+            }
+            else
+            {
+                inventory[tipIdSlot] = equippedItems[8];
+                equippedItems[8] = database.items[itemId];
+                showTip = false;
+            }
+        }
+        if (database.items[itemId].itemIsOffHand)
+        {
+            if (equippedItems[9].itemName == null)
+            {
+                equippedItems[9] = database.items[itemId];
+                inventory[tipIdSlot] = emptySlots[tipIdSlot];
+                showTip = false;
+            }
+            else
+            {
+                inventory[tipIdSlot] = equippedItems[9];
+                equippedItems[9] = database.items[itemId];
+                showTip = false;
+            }
+        }
+        if (database.items[itemId].itemIsLegs)
+        {
+            if (equippedItems[2].itemName == null)
+            {
+                equippedItems[2] = database.items[itemId];
+                inventory[tipIdSlot] = emptySlots[tipIdSlot];
+                showTip = false;
+            }
+            else
+            {
+                inventory[tipIdSlot] = equippedItems[2];
+                equippedItems[2] = database.items[itemId];
+                showTip = false;
+            }
+        }
+        if (database.items[itemId].itemIsFeet)
+        {
+            if (equippedItems[3].itemName == null)
+            {
+                equippedItems[3] = database.items[itemId];
+                inventory[tipIdSlot] = emptySlots[tipIdSlot];
+                showTip = false;
+            }
+            else
+            {
+                inventory[tipIdSlot] = equippedItems[3];
+                equippedItems[3] = database.items[itemId];
+                showTip = false;
+            }
+        }
+    }
+    void UnequipItem()
+    {
+        for (int i = 0; i < inventory.Count; i++)
+        {
+            if (inventory[i].itemName == null)
+            {
+                equippedItems[tipIdSlot] = emptySlots[tipIdSlot];
+                inventory[i] = database.items[tipIdItem];
+                break;
+            }
+        }
+
+        showTipEquipped = false;
     }
 
     private void OnGUI()
@@ -222,6 +402,11 @@ public class InventoryGUI : MonoBehaviour
         if (showTip)
         {
             tipRect = GUI.Window(1, tipRect, ShowTip, "");
+        }
+
+        if (showTipEquipped)
+        {
+            tipRect = GUI.Window(1, tipRect, ShowTipEquipped, "");
         }
 
         if (showDestroyAmount)
@@ -258,7 +443,7 @@ public class InventoryGUI : MonoBehaviour
 
         GUILayout.Box("" + itemCount, GUILayout.Width(50), GUILayout.Height(50));
 
-        if (GUILayout.Button("+", GUILayout.Width(50), GUILayout.Height(50)) && itemCount < inventoryStacks[tipId])
+        if (GUILayout.Button("+", GUILayout.Width(50), GUILayout.Height(50)) && itemCount < inventoryStacks[tipIdSlot])
         {
             itemCount++;
         }
@@ -270,29 +455,29 @@ public class InventoryGUI : MonoBehaviour
         GUILayout.BeginHorizontal();
         if (GUILayout.Button("Destroy", GUILayout.Width(200), GUILayout.Height(50)))
         {
-            if (itemCount == inventoryStacks[tipId]) // if input == full stack, destroy all
+            if (itemCount == inventoryStacks[tipIdSlot]) // if input == full stack, destroy all
             {
-                playerscript.currentWeight = playerscript.currentWeight - (inventory[tipId].itemWeight * itemCount);
+                RemovePlayerWeight(database.items[tipIdItem].itemWeight * itemCount);
                 itemCount = 1;
-                inventoryStacks[tipId] = 1;
-                inventory[tipId] = emptySlots[tipId];
+                inventoryStacks[tipIdSlot] = 1;
+                inventory[tipIdSlot] = emptySlots[tipIdSlot];
                 showDestroyAmount = false;
             }
             else //if input != full stack, destroy input count
             {
-                inventoryStacks[tipId] = inventoryStacks[tipId] - itemCount;
+                inventoryStacks[tipIdSlot] = inventoryStacks[tipIdSlot] - itemCount;
                 showDestroyAmount = false;
-                playerscript.currentWeight = playerscript.currentWeight - (inventory[tipId].itemWeight * itemCount);
+                RemovePlayerWeight(database.items[tipIdItem].itemWeight * itemCount);
                 itemCount = 1;
             }
         }
 
         if (GUILayout.Button("Destroy All", GUILayout.Width(200), GUILayout.Height(50)))
         {
-            playerscript.currentWeight = playerscript.currentWeight - (inventory[tipId].itemWeight * inventoryStacks[tipId]);
+            RemovePlayerWeight(database.items[tipIdItem].itemWeight * inventoryStacks[tipIdSlot]);
             itemCount = 1;
-            inventoryStacks[tipId] = 1;
-            inventory[tipId] = emptySlots[tipId];
+            inventoryStacks[tipIdSlot] = 1;
+            inventory[tipIdSlot] = emptySlots[tipIdSlot];
             showDestroyAmount = false;
         }
         GUILayout.EndHorizontal();
@@ -301,7 +486,7 @@ public class InventoryGUI : MonoBehaviour
         GUILayout.EndArea();
     }
 
-    //ITEM TIP
+    //ITEM TIP INVENTORY
     void ShowTip(int windowId)
     {
         GUILayout.BeginArea(new Rect(0, 0, 30, 30));
@@ -315,30 +500,88 @@ public class InventoryGUI : MonoBehaviour
         GUILayout.BeginVertical();
 
         GUILayout.BeginHorizontal();
-        GUILayout.Box(inventory[tipId].itemIcon, GUILayout.Width(200), GUILayout.Height(200));
-        GUILayout.Box(inventory[tipId].itemName + '\n' + inventory[tipId].itemName + " stats go here", GUILayout.Width(200), GUILayout.Height(200));
+        GUILayout.Box(database.items[tipIdItem].itemIcon, GUILayout.Width(200), GUILayout.Height(200));
+        GUILayout.Box(database.items[tipIdItem].itemName + '\n' + database.items[tipIdItem].itemName + " stats go here" + '\n' + "can sell for " + database.items[tipIdItem].itemCost + " gp", GUILayout.Width(200), GUILayout.Height(200));
         GUILayout.EndHorizontal();
-        GUILayout.Box(inventory[tipId].itemDesc, GUILayout.Width(407), GUILayout.Height(150));
+        GUILayout.Box(database.items[tipIdItem].itemDesc, GUILayout.Width(407), GUILayout.Height(150));
 
 
         GUILayout.BeginHorizontal();
         if (GUILayout.Button("Destroy", GUILayout.Width(200), GUILayout.Height(50)))
         {
+            if (database.items[tipIdSlot].itemType == ItemsMk2.ItemType.Weapon)
+            {
+                Debug.Log("GOOOOD");
+            }
+
             //ask how much to destroy if stacked
-            if (inventoryStacks[tipId] > 1)
+            if (inventoryStacks[tipIdSlot] > 1)
             {
                 showDestroyAmount = true;
                 showTip = false;
             }
             //destroy immidiately if not stackable or stack == 1
-            if (inventoryStacks[tipId] == 1)
+            if (inventoryStacks[tipIdSlot] == 1)
             {
                 showTip = false;
-                inventoryStacks[tipId] = 0;
-                inventory[tipId] = emptySlots[tipId];
+                Debug.Log("weight=" + database.items[tipIdItem].itemWeight);
+                RemovePlayerWeight(database.items[tipIdItem].itemWeight);
+                inventoryStacks[tipIdSlot] = 0;
+                inventory[tipIdSlot] = emptySlots[tipIdSlot];
             }
         }
-        GUILayout.Button("Use", GUILayout.Width(200), GUILayout.Height(50));
+
+        if ((database.items[tipIdItem].itemType == ItemsMk2.ItemType.Weapon) || (database.items[tipIdItem].itemType == ItemsMk2.ItemType.Armor) || (database.items[tipIdItem].itemType == ItemsMk2.ItemType.Jewelry))
+        {
+            if (GUILayout.Button("Equip", GUILayout.Width(200), GUILayout.Height(50)))
+            {
+                EquipItem(tipIdItem);
+            }
+        }
+
+        else
+        {
+            if (GUILayout.Button("Use", GUILayout.Width(200), GUILayout.Height(50)))
+            {
+
+            }
+        }
+        GUILayout.EndHorizontal();
+        GUILayout.EndVertical();
+        GUILayout.EndArea();
+    }
+
+    //ITEM TIP EQUIPPED
+    void ShowTipEquipped(int windowId)
+    {
+        GUILayout.BeginArea(new Rect(0, 0, 30, 30));
+        if (GUILayout.Button("X", GUILayout.Width(30), GUILayout.Height(30)))
+        {
+            showTipEquipped = false;
+        }
+        GUILayout.EndArea();
+
+        GUILayout.BeginArea(new Rect(0, 0, 407, 407));
+        GUILayout.BeginVertical();
+
+        GUILayout.BeginHorizontal();
+        GUILayout.Box(database.items[tipIdItem].itemIcon, GUILayout.Width(200), GUILayout.Height(200));
+        GUILayout.Box(database.items[tipIdItem].itemName + '\n' + database.items[tipIdItem].itemName + " stats go here" + '\n' + "can sell for " + database.items[tipIdItem].itemCost + " gp", GUILayout.Width(200), GUILayout.Height(200));
+        GUILayout.EndHorizontal();
+        GUILayout.Box(database.items[tipIdItem].itemDesc, GUILayout.Width(407), GUILayout.Height(150));
+
+
+        GUILayout.BeginHorizontal();
+        if (GUILayout.Button("Destroy", GUILayout.Width(200), GUILayout.Height(50)))
+        {
+            showTipEquipped = false;
+            RemovePlayerWeight(database.items[tipIdItem].itemWeight);
+            equippedItems[tipIdSlot] = emptySlots[tipIdSlot];
+        }
+        if (GUILayout.Button("Unequip", GUILayout.Width(200), GUILayout.Height(50)))
+        {
+            UnequipItem();
+        }
         GUILayout.EndHorizontal();
 
 
@@ -356,7 +599,12 @@ public class InventoryGUI : MonoBehaviour
         int.TryParse(GUILayout.TextField(spawnAmount.ToString()), out spawnAmount);
         if (GUILayout.Button("Add Item", GUILayout.Width(90), GUILayout.Height(25)))
         {
-            AddItem(spawnId, spawnAmount);
+            if (spawnId < database.items.Count)
+            {
+                AddItem(spawnId, spawnAmount);
+            }
+            else { }
+
         }
         GUILayout.EndVertical();
         GUILayout.EndArea();
@@ -364,34 +612,115 @@ public class InventoryGUI : MonoBehaviour
         //horizontal top
         GUILayout.BeginArea(new Rect(horizontalTop, new Vector2(inventoryItemsBoxWidth * 2.25f, inventoryItemsBoxHeight)));
         GUILayout.BeginHorizontal();
-        GUILayout.Button("Head", GUILayout.Height(inventoryItemsBoxHeight), GUILayout.Width(inventoryItemsBoxWidth));
-        GUILayout.Button("Amulet", GUILayout.Height(inventoryItemsBoxHeight), GUILayout.Width(inventoryItemsBoxWidth));
+        if (GUILayout.Button(equippedItems[0].itemIcon, GUILayout.Height(inventoryItemsBoxHeight), GUILayout.Width(inventoryItemsBoxWidth)))
+        {
+            if (equippedItems[0].itemName != null)
+            {
+                tipIdItem = equippedItems[0].itemID;
+                tipIdSlot = 0;
+                showTipEquipped = true;
+            }
+        }
+        if (GUILayout.Button(equippedItems[1].itemIcon, GUILayout.Height(inventoryItemsBoxHeight), GUILayout.Width(inventoryItemsBoxWidth)))
+        {
+            if (equippedItems[1].itemName != null)
+            {
+                tipIdItem = equippedItems[1].itemID;
+                tipIdSlot = 1;
+                showTipEquipped = true;
+            }
+        }
         GUILayout.EndHorizontal();
         GUILayout.EndArea();
 
         //horizontal bottom
         GUILayout.BeginArea(new Rect(horizontalBottom, new Vector2(inventoryItemsBoxWidth * 2.25f, inventoryItemsBoxHeight)));
         GUILayout.BeginHorizontal();
-        GUILayout.Button("Legs", GUILayout.Height(inventoryItemsBoxHeight), GUILayout.Width(inventoryItemsBoxWidth));
-        GUILayout.Button("Feet", GUILayout.Height(inventoryItemsBoxHeight), GUILayout.Width(inventoryItemsBoxWidth));
+        if (GUILayout.Button(equippedItems[2].itemIcon, GUILayout.Height(inventoryItemsBoxHeight), GUILayout.Width(inventoryItemsBoxWidth)))
+        {
+            if (equippedItems[2].itemName != null)
+            {
+                tipIdItem = equippedItems[2].itemID;
+                tipIdSlot = 2;
+                showTipEquipped = true;
+            }
+        }
+        if (GUILayout.Button(equippedItems[3].itemIcon, GUILayout.Height(inventoryItemsBoxHeight), GUILayout.Width(inventoryItemsBoxWidth)))
+        {
+            if (equippedItems[3].itemName != null)
+            {
+                tipIdItem = equippedItems[3].itemID;
+                tipIdSlot = 3;
+                showTipEquipped = true;
+            }
+        }
         GUILayout.EndHorizontal();
         GUILayout.EndArea();
 
         //vertical left
         GUILayout.BeginArea(new Rect(VerticalLeft, new Vector2(inventoryItemsBoxWidth, inventoryItemsBoxHeight * 4.25f)));
         GUILayout.BeginVertical();
-        GUILayout.Button("Torso", GUILayout.Height(inventoryItemsBoxHeight), GUILayout.Width(inventoryItemsBoxWidth));
-        GUILayout.Button("Hands", GUILayout.Height(inventoryItemsBoxHeight), GUILayout.Width(inventoryItemsBoxWidth));
-        GUILayout.Button("Ring1", GUILayout.Height(inventoryItemsBoxHeight), GUILayout.Width(inventoryItemsBoxWidth));
-        GUILayout.Button("Ring2", GUILayout.Height(inventoryItemsBoxHeight), GUILayout.Width(inventoryItemsBoxWidth));
+        if (GUILayout.Button(equippedItems[4].itemIcon, GUILayout.Height(inventoryItemsBoxHeight), GUILayout.Width(inventoryItemsBoxWidth)))
+        {
+            if (equippedItems[4].itemName != null)
+            {
+                tipIdItem = equippedItems[4].itemID;
+                tipIdSlot = 4;
+                showTipEquipped = true;
+            }
+        }
+
+        if (GUILayout.Button(equippedItems[5].itemIcon, GUILayout.Height(inventoryItemsBoxHeight), GUILayout.Width(inventoryItemsBoxWidth)))
+        {
+            if (equippedItems[5].itemName != null)
+            {
+                tipIdItem = equippedItems[5].itemID;
+                tipIdSlot = 5;
+                showTipEquipped = true;
+            }
+        }
+        if (GUILayout.Button(equippedItems[6].itemIcon, GUILayout.Height(inventoryItemsBoxHeight), GUILayout.Width(inventoryItemsBoxWidth)))
+        {
+            if (equippedItems[6].itemName != null)
+            {
+                tipIdItem = equippedItems[6].itemID;
+                tipIdSlot = 6;
+                showTipEquipped = true;
+            }
+        }
+        if (GUILayout.Button(equippedItems[7].itemIcon, GUILayout.Height(inventoryItemsBoxHeight), GUILayout.Width(inventoryItemsBoxWidth)))
+        {
+            if (equippedItems[7].itemName != null)
+            {
+                tipIdItem = equippedItems[7].itemID;
+                tipIdSlot = 7;
+                showTipEquipped = true;
+            }
+        }
         GUILayout.EndVertical();
         GUILayout.EndArea();
 
         //vertical right
         GUILayout.BeginArea(new Rect(VerticalRight, new Vector2(inventoryItemsBoxWidth, inventoryItemsBoxHeight * 2.25f)));
         GUILayout.BeginVertical();
-        GUILayout.Button("L.Hand", GUILayout.Height(inventoryItemsBoxHeight), GUILayout.Width(inventoryItemsBoxWidth));
-        GUILayout.Button("R.Hand", GUILayout.Height(inventoryItemsBoxHeight), GUILayout.Width(inventoryItemsBoxWidth));
+        if (GUILayout.Button(equippedItems[8].itemIcon, GUILayout.Height(inventoryItemsBoxHeight), GUILayout.Width(inventoryItemsBoxWidth)))
+        {
+            if (equippedItems[8].itemName != null)
+            {
+                tipIdItem = equippedItems[8].itemID;
+                tipIdSlot = 8;
+                showTipEquipped = true;
+            }
+        }
+        if (GUILayout.Button(equippedItems[9].itemIcon, GUILayout.Height(inventoryItemsBoxHeight), GUILayout.Width(inventoryItemsBoxWidth)))
+        {
+            if (equippedItems[9].itemName != null)
+            {
+                tipIdItem = equippedItems[9].itemID;
+                tipIdSlot = 9;
+                showTipEquipped = true;
+            }
+        }
         GUILayout.EndVertical();
         GUILayout.EndArea();
 
@@ -425,7 +754,8 @@ public class InventoryGUI : MonoBehaviour
                     if (GUILayout.Button(inventory[j].itemIcon, GUILayout.Height(inventoryItemsBoxHeight), GUILayout.Width(inventoryItemsBoxWidth)) && inventory[j].itemName != null)
                     {
                         showTip = true;
-                        tipId = j;
+                        tipIdItem = inventory[j].itemID;
+                        tipIdSlot = j;
                     }
                     //DISPLAY ITEMCOUNT BEGIN
                     GUILayout.BeginArea(new Rect(inventoryItemsBoxWidth - 25, inventoryItemsBoxWidth - 20, 40, 20));
