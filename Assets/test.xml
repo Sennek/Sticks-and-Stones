@@ -1,0 +1,22 @@
+<Dialogue>
+  <Node Id="0">
+    <Text>Hi</Text>
+    <Option ToNodeId="1">Hi</Option>
+    <Option ToNodeId="-1">Go away</Option>
+  </Node>
+  <Node Id="1">
+    <Text>My name is Sanya, how are you?</Text>
+    <Option ToNodeId="2">I'm fine, how are you?</Option>
+    <Option ToNodeId="-1">I don't care.</Option>
+  </Node>
+  <Node Id="2">
+    <Text>I feel terrible actually</Text>
+    <Option ToNodeId="3">Why?</Option>
+    <Option ToNodeId="-1">If you say so</Option>
+  </Node>
+  <Node Id="3">
+    <Text>The gayclub is closed for the whole summer!</Text>
+    <Option ToNodeId="-1">Eww gay!</Option>
+    <Option ToNodeId="-1">Eww gay!</Option>
+  </Node>
+</Dialogue>
