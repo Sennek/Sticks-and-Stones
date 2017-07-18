@@ -1,22 +1,63 @@
 <Dialogue>
-  <Node Id="0">
-    <Text>Hi</Text>
-    <Option ToNodeId="1">Hi</Option>
-    <Option ToNodeId="-1">Go away</Option>
-  </Node>
   <Node Id="1">
-    <Text>My name is Sanya, how are you?</Text>
-    <Option ToNodeId="2">I'm fine, how are you?</Option>
-    <Option ToNodeId="-1">I don't care.</Option>
+    <Text>Что тебе нужно от меня?</Text>
+    <Option ToNodeId="2">Расскажи про город, дед</Option>
+    <Option ToNodeId="3">Расскажи про себя</Option>
+    <Option ToNodeId="-1">Отвали от меня, бомж!</Option>
   </Node>
   <Node Id="2">
-    <Text>I feel terrible actually</Text>
-    <Option ToNodeId="3">Why?</Option>
-    <Option ToNodeId="-1">If you say so</Option>
+    <Text>Какой город? Ты обдолбался? Посмотри вокруг, тут нет ничего! Ты даже прыгать не умеешь.</Text>
+    <Option ToNodeId="-1">Боже…</Option>
   </Node>
   <Node Id="3">
-    <Text>The gayclub is closed for the whole summer!</Text>
-    <Option ToNodeId="-1">Eww gay!</Option>
-    <Option ToNodeId="-1">Eww gay!</Option>
+    <Text>О себе рассказать? Правда? Но я предупрежаю, это долгая история</Text>
+    <Option ToNodeId="4">Ничего, я никуда не спешу</Option>
+    <Option ToNodeId="4">Пожалуй, нет, я передумал</Option>
+  </Node>
+  <Node Id="4">
+    <Text>Ну, значит, слушай. Было это много лет назад….</Text>
+    <Option ToNodeId="5">…</Option>
+    <Option ToNodeId="5">Э, я ж сказал, не хочу, отвяжись от меня!</Option>
+  </Node>
+  <Node Id="5">
+    <Text>… Я тогда состоял в банде разбойников. Мы были грозой этого мира, власть и богачи нас боялись, а бедные уважали и старались укрыть. Может быть, ты даже слышал о нашей банде, ведь про нас слагали легенды. У нас не было имени, но на наших флагах была изображена грозная обезьяна…</Text>
+    <Option ToNodeId="6">Впервые слышу</Option>
+    <Option ToNodeId="6">Да, я, кажется, припоминаю какие-то рассказы про обезьяну</Option>
+    <Option ToNodeId="6">*Что я наделал…*</Option>
+  </Node>
+  <Node Id="6">
+    <Text>… Так вот, мы были  сильны. У нас было очень много ресурсов, у нас было оружие и навыки. Мы воровали прямо из под носа других банд. Нас пытались поймать, нас пытались убить, но все безуспешно. До одного рокового дня…</Text>
+    <Option ToNodeId="7">Продолжай…</Option>
+    <Option ToNodeId="7">*Господи, че несет *</Option>
+  </Node>
+  <Node Id="7">
+    <Text>… В тот день, я совершил ошибку, из-за которой моя жизнь пошла под откос. Меня обманули, понимаешь? Обманули! И я показал им, где лежит все награбленное… Я не хотел, честно…</Text>
+    <Option ToNodeId="8">Как тебя обманули?</Option>
+  </Node>
+  <Node Id="8">
+    <Text>… Они пришли и постучали в дверь… А я открыл…</Text>
+    <Option ToNodeId="9">Кто они? Ты знаешь, кто это был?</Option>
+    <Option ToNodeId="10">Ты что сделал? Ты идиот? Зачем ты открыл им дверь?</Option>
+    <Option ToNodeId="11">Вот так просто? Может, они хоть представились кем-то? Или код какой назвали?</Option>
+  </Node>
+  <Node Id="9">
+    <Text>… Нет, какой-то иностранец. Я впервые его видел…</Text>
+    <Option ToNodeId="12">И ты так просто впустил его?</Option>
+  </Node>
+  <Node Id="10">
+    <Text>… Я не знаю, просто взял и открыл…</Text>
+    <Option ToNodeId="12"> Ты даже не подумал, что там может быть противник?</Option>
+  </Node>
+  <Node Id="11">
+    <Text>… Нет… Просто постучали, крикнули что-то на другом языке…</Text>
+    <Option ToNodeId="12">Мужик, ты гений…</Option>
+  </Node>
+  <Node Id="12">
+    <Text>… Мне нечего тебе ответить! Меня обманули! Все было подстроено, я тут не при чем! Не обвиняй меня, будто сам умеешь что-то! Ты даже стрелять не умеешь, небось, а на меня гонишь!!!…</Text>
+    <Option ToNodeId="13">Эй, эй, полегче! Что дальше было?</Option>
+  </Node>
+  <Node Id="13">
+    <Text>… Дальше? А дальше ничего не было. Те люди унесли все, что у нас было. Ничего не оставили. Абсолютно. А всю вину мои товарищи свалили на меня, хотя я не виноват! Я просто дверь открыл! Я ведь не знал, я не хотел! И меня выгнали из банды. И вот я здесь, бомжую никому не нужный. </Text>
+    <Option ToNodeId="-1">Так тебе и надо!</Option>
   </Node>
 </Dialogue>
