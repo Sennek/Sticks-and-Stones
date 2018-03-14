@@ -1,77 +1,103 @@
 ﻿using UnityEngine;
+using XmlLoader;
 
 public class playerscript : MonoBehaviour
 {
-
-    public float movespeed = 1f;
-    public float jumpspeed = 1f;
-    public float jumpheight = -1f;
-    private Vector2 move;
-    public Vector2 jump;
+    public Vector2 move;
     private Rigidbody2D rgBD;
-    public bool isGrounded;
+    public PlayerData playerData;
+    public float maxWeight;
+    public float currentWeight;
+    public int maxHealth;
+    public int currentHealth;
+    public int maxMana;
+    public int currentMana;
+    public int maxStamina;
+    public int currentStamina;
+    public int maxExp;
+    public int currentExp;
+    public bool isCaster;
+    public int level;
+    public int statPoints;
+    public string playerClass;
+    public int speed;
+    public float dodge;
+    public float crit;
+    public int minDef;
+    public int maxDef;
+    public int minAtk;
+    public int maxAtk;
+    public int strength;
+    public int agility;
+    public int intellect;
+    public int charisma;
+    public int vitality;
 
     private void Start()
     {
+        strength = 5;
+        agility = 5;
+        intellect = 5;
+        vitality = 5;
+        charisma = 5;
+        level = 1;
+        currentExp = 0;
+        maxExp = 100;
+        minAtk = 1;
+        maxAtk = 3;
+        speed = 10;
+        maxWeight = 60 + strength * 2;
+        maxExp = level * 100;
+        maxHealth = vitality * 15;
+        maxMana = intellect * 10 + vitality * 3;
+        maxStamina = agility * 10 + vitality * 3;
+        currentHealth = maxHealth;
+        currentMana = maxMana;
+        currentStamina = maxStamina;
         rgBD = GetComponent<Rigidbody2D>();
+        // SaveManager.LoadData(1);
     }
 
-    //void moveHoriz()
-    //{
-       
-    //}
+
+    public void AddExp(int expAmount)
+    {
+        int addAmount = expAmount;
+        while (addAmount > 0)
+        {
+            //if add more than needed for levelup
+            if (addAmount >= (maxExp - currentExp))
+            {
+                level++;
+                statPoints += 5;
+                addAmount -= (maxExp - currentExp);
+                currentExp = 0;
+                maxExp = level * 100;
+
+            }
+            //if add less than needed for levelup
+            if (addAmount < (maxExp - currentExp))
+            {
+                currentExp += addAmount;
+                addAmount = 0;
+            }
+        }
+    }
 
     void Update()
     {
-        //move
-        //if (Input.GetButtonDown("Horizontal"))
-        //{
-        //    move.x = Input.GetAxisRaw("Horizontal") * movespeed;
-        //}
+        move.x = Input.GetAxisRaw("Horizontal") * 8;
+        if (move.x < 0)
+        { gameObject.GetComponent<SpriteRenderer>().flipX = true; }
 
-        //if (Input.GetButtonUp("Horizontal"))
-        //{
-        //    move.x = 0;
-        //}
-
-        move.x = Input.GetAxisRaw("Horizontal") * movespeed;
-        // face direction
-        if (Input.GetKey(KeyCode.A))
-            gameObject.GetComponent<SpriteRenderer>().flipX = true;
-
-        if (Input.GetKey(KeyCode.D))
-            gameObject.GetComponent<SpriteRenderer>().flipX = false;
-        //jump
-
-        if (Input.GetButtonDown("Jump") && isGrounded)
-        {
-            // rgBD.AddForce(new Vector2(0, jumpspeed), ForceMode2D.Force);
-            move.y = jumpspeed;
-        }
-
-        if (Input.GetButtonUp("Jump") || (gameObject.transform.position.y >= jumpheight))
-        {
-            move.y = -jumpspeed;
-        }
-
-    }
-    private void OnTriggerEnter2D(Collider2D collision)
-    {
-        isGrounded = true;
-    }
-
-    private void OnTriggerStay2D(Collider2D collision)
-    {
-        isGrounded = true;
-    }
-
-    private void OnTriggerExit2D(Collider2D collision)
-    {
-        isGrounded = false;
+        if (move.x > 0)
+        { gameObject.GetComponent<SpriteRenderer>().flipX = false; }
     }
 
     void FixedUpdate()
     {
-       rgBD.velocity = move;
+        maxHealth = vitality * 15;
+        maxMana = intellect * 10 + vitality * 3;
+        maxStamina = agility * 10 + vitality * 3;
+        rgBD.velocity = move;
     }
 }

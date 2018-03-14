@@ -9,7 +9,7 @@ public class cmrfllw : MonoBehaviour {
     void Start ()
     {
         offset = transform.position;
-        player = GameObject.Find("player");
+        player = GameObject.Find("Player");
     }
 
     void LateUpdate ()
