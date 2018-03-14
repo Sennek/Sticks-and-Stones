@@ -8,8 +8,37 @@ public class grid : MonoBehaviour {
     public float width = 32f;
     public float height = 32f;
     public bool save;
-
+    
     public Color color = Color.white;
+
+        public void SaveVectors()
+    {
+        StreamWriter sw;
+        sw = new StreamWriter("Assets/Resources/level.txt", true);
+
+       Queue objects = new Queue(GameObject.FindObjectsOfType<GameObject>());
+        foreach (GameObject t in objects)
+        {
+            if ((t.name == "levelEditor") || (t.name == "Main Camera"))
+            {
+                objects.Dequeue();
+            }
+           else if ((t.name != "levelEditor") || (t.name != "Main Camera"))
+            {
+                Debug.Log(t.name);
+                objects.Dequeue();
+            }
+        }
+
+    //    GameObject[] objects = GameObject.FindObjectsOfType<GameObject>() as GameObject[];       
+    //    foreach (GameObject t in objects)
+    //    {
+    //        if ((t.name != "levelEditor") || (t.name != "Main Camera"))
+    //        sw.WriteLine(t.name + " " + t.transform.position + " " + t.transform.localScale + " " + t.GetComponent<SpriteRenderer>().flipX + " " + t.GetComponent<SpriteRenderer>().sprite);
+    //        //Debug.Log(t.GetComponent<SpriteRenderer>().flipX); // Debugging
+    //    }
+    //    sw.Close();
+    }
 
    void Update()
     {
@@ -22,21 +51,6 @@ public class grid : MonoBehaviour {
     {
         print("saved!");
     }
-
-    public void writeToTxt()
-    {
-        StreamWriter sw;
-        sw = new StreamWriter("Assets/Resources/test.txt", true);
-        sw.WriteLine("this is test");
-        sw.Close();
-    }
-
-    //private void Update()
-    //{
-    //    sw.WriteLine("this is test");
-
-    //    sw.Flush();
-    //}
 
     void OnDrawGizmos()
     {
